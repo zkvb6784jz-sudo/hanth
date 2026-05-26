@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PK大挑战 | 双人抢答器 • 音效倒计时版</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(145deg, #1e5f8e 0%, #1a4e73 100%);
+            font-family: 'Comic Neue', 'Comic Neue', 'Chalkboard SE', 'Comic Sans MS', 'cursive', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .app-container {
+            width: 1300px;
+            max-width: 98vw;
+            min-height: 700px;
+            background-color: #fff6e0;
+            border-radius: 72px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.3), inset 0 1px 4px rgba(255,255,200,0.8);
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .page {
+            display: none;
+            padding: 24px 28px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .active-page {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98);}
+            to { opacity: 1; transform: scale(1);}
+        }
+
+        .cute-title {
+            font-size: 2rem;
+            color: #ffb347;
+            text-shadow: 3px 3px 0 #c45e00;
+            background: #fff0c0;
+            display: inline-block;
+            padding: 8px 24px;
+            border-radius: 60px;
+            margin-bottom: 20px;
+            box-shadow: 0 6px 0 #ccaa77;
+        }
+
+        /* 主页卡片网格：3列自适应，末尾加号自动扩展 */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .quiz-card {
+            background: #fffff2;
+            border-radius: 48px;
+            padding: 18px 12px 16px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 12px 0 #bc9a6c;
+            transition: transform 0.1s ease, box-shadow 0.1s;
+            border: 3px solid #ffdb8a;
+        }
+
+        .quiz-card:active { transform: translateY(3px); box-shadow: 0 6px 0 #bc9a6c;}
+
+        .quiz-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #5e2e0e;
+            word-break: break-word;
+            background: #ffefc0;
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 40px;
+            margin: 8px 0;
+        }
+
+        .card-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .card-btn {
+            background: #ffbb77;
+            border: none;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 1rem;
+            padding: 8px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #b4621a;
+            transition: 0.05s linear;
+        }
+        .card-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #b4621a; }
+        .start-btn { background: #6fcf97; color: #1f4f2d; box-shadow: 0 3px 0 #2f6b33; }
+
+        .delete-group {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: #ff6666;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 22px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .add-card {
+            background: #d9f0c5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-size: 3rem;
+            font-weight: bold;
+            color: #5c9e3e;
+            border: 3px dashed #8bc34a;
+            cursor: pointer;
+        }
+
+        .edit-form {
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .question-item {
+            background: #fef3da;
+            border-radius: 48px;
+            padding: 18px;
+            margin-bottom: 20px;
+            border: 2px solid #ffcb77;
+        }
+
+        .img-preview {
+            max-width: 120px;
+            max-height: 120px;
+            margin: 8px 0;
+            border: 2px solid #ffa559;
+            border-radius: 0;
+        }
+
+        button, .btn {
+            background: #ffaa44;
+            border: none;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 1rem;
+            padding: 12px 24px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.1s linear;
+            box-shadow: 0 5px 0 #b4621a;
+            margin: 4px;
+        }
+
+        button:active { transform: translateY(2px); box-shadow: 0 2px 0 #b4621a;}
+
+        /* 对战页面 */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffe5b4;
+            padding: 12px 20px;
+            border-radius: 60px;
+            margin-bottom: 20px;
+        }
+
+        .team {
+            text-align: center;
+            background: white;
+            border-radius: 50px;
+            padding: 8px 16px;
+            width: 180px;
+            box-shadow: 0 6px 0 #c7a25e;
+        }
+
+        .red-team { border-left: 12px solid #ff4d4d; }
+        .blue-team { border-left: 12px solid #4d79ff; }
+        .score {
+            font-size: 2.4rem;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .center-progress {
+            background: #fff0b5;
+            border-radius: 60px;
+            padding: 8px 20px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #c45e00;
+            text-align: center;
+            min-width: 160px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05), 0 5px 0 #e1b067;
+        }
+        .timer-box {
+            font-size: 1.8rem;
+            background: #ffeecc;
+            border-radius: 50px;
+            padding: 4px 12px;
+            margin-top: 6px;
+            color: #e67e22;
+        }
+
+        .question-area {
+            background: #fff3e0;
+            border-radius: 70px;
+            padding: 20px 20px 30px;
+            margin: 15px 0;
+            text-align: center;
+            min-height: 360px;
+            transition: all 0.2s;
+        }
+
+        .question-img {
+            max-width: 90%;
+            max-height: 320px;
+            margin: 12px auto;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            display: block;
+            border-radius: 0;
+        }
+
+        .question-content {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #482a14;
+            word-break: break-word;
+        }
+
+        .answer-ref {
+            background: #e6d5b3;
+            border-radius: 40px;
+            padding: 8px 15px;
+            margin-top: 12px;
+            font-size: 1rem;
+            display: none;
+            max-width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .buzzers {
+            display: flex;
+            justify-content: space-around;
+            gap: 30px;
+            margin: 20px 0;
+        }
+
+        .buzzer {
+            flex: 1;
+            padding: 24px 12px;
+            font-size: 2rem;
+            font-weight: bold;
+            border-radius: 80px;
+            text-align: center;
+            box-shadow: 0 12px 0 rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+
+        .buzzer-red { background: #ff5e5e; color: white; box-shadow: 0 12px 0 #a13333; }
+        .buzzer-blue { background: #5e8eff; color: white; box-shadow: 0 12px 0 #2a4599; }
+        .glow-effect {
+            box-shadow: 0 0 0 8px gold, 0 0 0 16px #ffdd77, 0 12px 0 #b4621a;
+        }
+
+        .modal-mask {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-card {
+            background: #fffae9;
+            border-radius: 68px;
+            padding: 32px;
+            text-align: center;
+            min-width: 280px;
+            border: 5px solid #ffc857;
+        }
+
+        .winner-cup {
+            font-size: 3.5rem;
+            animation: bounce 0.5s;
+        }
+
+        @keyframes bounce {
+            0% { transform: scale(0.8);}
+            80% { transform: scale(1.2);}
+            100% { transform: scale(1);}
+        }
+
+        .home-btn {
+            background: #59b35e;
+            color: white;
+            font-size: 1.3rem;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 200;
+            box-shadow: 0 6px 0 #2f6b33;
+        }
+
+        .result-overlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .result-text {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #d35400;
+        }
+
+        @media (max-width: 800px) {
+            .team { width: 130px; padding: 4px; }
+            .score { font-size: 1.8rem; }
+            .buzzer { font-size: 1.2rem; padding: 14px; }
+            .center-progress { font-size: 0.9rem; min-width: 120px; }
+            .timer-box { font-size: 1.2rem; }
+            .card-buttons { flex-direction: column; gap: 6px; }
+            .card-btn { font-size: 0.8rem; padding: 6px 12px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container" id="appRoot">
+    <!-- 主页面 -->
+    <div id="homePage" class="page active-page">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap:wrap;">
+            <div class="cute-title">📚 PK大挑战</div>
+            <div style="font-size:1.2rem; background:#ffdea4; padding:6px 20px; border-radius:40px;">✨ 寒寒老师出品 ✨</div>
+        </div>
+        <div class="card-grid" id="quizGrid"></div>
+        <div style="margin-top: 20px; text-align: center; font-size:1rem; color:#5d3a1a;">点击【开始】双人对战 | 每组可独立设置倒计时</div>
+    </div>
+
+    <!-- 编辑页面 -->
+    <div id="editPage" class="page">
+        <div class="cute-title">✏️ 编辑竞猜组</div>
+        <input type="text" id="groupNameInput" placeholder="竞猜组名称" style="font-size:1.4rem; padding:10px; width:80%; border-radius:60px; border:2px solid #ffbc6e; margin-bottom:10px;">
+        <div style="margin-bottom:15px;">
+            <label style="font-weight:bold;">⏱️ 每道题时间上限：</label>
+            <select id="timeLimitSelect">
+                <option value="5">5秒</option><option value="10" selected>10秒</option><option value="15">15秒</option>
+                <option value="20">20秒</option><option value="25">25秒</option><option value="30">30秒</option>
+            </select>
+        </div>
+        <div id="questionsEditor" class="edit-form"></div>
+        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+            <button id="saveGroupBtn">✅ 完成并保存</button>
+            <button id="cancelEditBtn">◀ 返回主页</button>
+        </div>
+        <div style="margin-top:12px; text-align:center;">最多10道题，最少1道题，可传图或文字</div>
+    </div>
+
+    <!-- 对战页面 -->
+    <div id="gamePage" class="page">
+        <div class="game-header">
+            <div class="team red-team">🔥 红队 <div class="score" id="redScore">0</div></div>
+            <div class="center-progress">
+                <div id="progressCenter">第 1 / 0 题</div>
+                <div class="timer-box" id="timerDisplay">⏰ --秒</div>
+            </div>
+            <div class="team blue-team">💧 蓝队 <div class="score" id="blueScore">0</div></div>
+        </div>
+        <div class="question-area" id="questionArea">
+            <div id="questionDisplay" class="question-content">✨ 题目加载中 ✨</div>
+            <div id="answerForTeacher" class="answer-ref">📌 参考答案：<span id="teacherAnswer"></span></div>
+        </div>
+        <div class="buzzers">
+            <div class="buzzer buzzer-red" id="redBuzzer">🔴 红队抢答</div>
+            <div class="buzzer buzzer-blue" id="blueBuzzer">🔵 蓝队抢答</div>
+        </div>
+        <div id="gameMessage" style="text-align:center; margin:10px; font-weight:bold; min-height: 40px;"></div>
+        <button id="exitGameBtn" style="background:#aa8866;">🏠 退出对局</button>
+    </div>
+</div>
+
+<script>
+    // ---------- 音效管理器 ----------
+    let audioCtx = null;
+    function initAudio() { if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } }
+    function playSound(type) {
+        if (!audioCtx) { initAudio(); if(!audioCtx) return; }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+        const gain = audioCtx.createGain();
+        gain.connect(audioCtx.destination);
+        const osc = audioCtx.createOscillator();
+        osc.connect(gain);
+        gain.gain.setValueAtTime(0.2, now);
+        switch(type) {
+            case 'click':
+                osc.frequency.value = 700;
+                gain.gain.exponentialRampToValueAtTime(0.0001, now+0.1);
+                osc.start(); osc.stop(now+0.08);
+                break;
+            case 'correct':
+                osc.frequency.value = 880;
+                gain.gain.exponentialRampToValueAtTime(0.0001, now+0.25);
+                osc.start(); osc.stop(now+0.2);
+                break;
+            case 'wrong':
+                osc.frequency.value = 330;
+                gain.gain.exponentialRampToValueAtTime(0.0001, now+0.3);
+                osc.start(); osc.stop(now+0.25);
+                break;
+            case 'giveup':
+                osc.frequency.value = 500;
+                gain.gain.exponentialRampToValueAtTime(0.0001, now+0.1);
+                osc.start(); osc.stop(now+0.08);
+                setTimeout(() => { 
+                    if(audioCtx) {
+                        const osc2 = audioCtx.createOscillator(); const gain2 = audioCtx.createGain();
+                        gain2.connect(audioCtx.destination); osc2.connect(gain2);
+                        gain2.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                        osc2.frequency.value = 400;
+                        gain2.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+0.1);
+                        osc2.start(); osc2.stop(audioCtx.currentTime+0.08);
+                    }
+                }, 80);
+                break;
+            case 'tick':
+                osc.frequency.value = 1200;
+                gain.gain.exponentialRampToValueAtTime(0.0001, now+0.06);
+                osc.start(); osc.stop(now+0.05);
+                break;
+            case 'victory':
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const oscM = audioCtx.createOscillator();
+                    const gainM = audioCtx.createGain();
+                    gainM.connect(audioCtx.destination);
+                    oscM.connect(gainM);
+                    gainM.gain.setValueAtTime(0.2, now+idx*0.18);
+                    gainM.gain.exponentialRampToValueAtTime(0.0001, now+idx*0.18+0.3);
+                    oscM.frequency.value = freq;
+                    oscM.start(now+idx*0.18);
+                    oscM.stop(now+idx*0.18+0.25);
+                });
+                break;
+            default: break;
+        }
+    }
+
+    // ---------- 数据模型 ----------
+    let quizGroups = [];  
+    let nextId = 1;
+    let currentEditGroupIndex = -1;
+    let currentGameGroup = null;
+    let timerInterval = null;
+    let gameState = {
+        currentQuestionIdx: 0,
+        redScore: 0,
+        blueScore: 0,
+        canBuzz: true,
+        isWaitingModal: false,
+        activeBuzzerTeam: null,
+        isOpponentTurn: false,
+        turnTeam: null,
+        gameOver: false,
+        timeLimit: 10,
+        timeLeft: 0,
+        timerActive: false
+    };
+    let currentModalDiv = null;
+
+    function setAnswerVisible(visible) {
+        const answerRef = document.getElementById('answerForTeacher');
+        if(answerRef) answerRef.style.display = visible ? 'inline-block' : 'none';
+    }
+
+    function stopTimer() {
+        if(timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        gameState.timerActive = false;
+    }
+
+    function startTimer(limitSec) {
+        if(timerInterval) stopTimer();
+        gameState.timeLeft = limitSec;
+        updateTimerUI();
+        if(gameState.timeLeft <= 0) { handleTimeout(); return; }
+        gameState.timerActive = true;
+        timerInterval = setInterval(() => {
+            if(!gameState.timerActive || gameState.gameOver || gameState.isWaitingModal) return;
+            if(gameState.timeLeft > 0) {
+                gameState.timeLeft--;
+                updateTimerUI();
+                if(gameState.timeLeft <= 3 && gameState.timeLeft >= 1 && !gameState.isWaitingModal && gameState.canBuzz) {
+                    playSound('tick');
+                }
+                if(gameState.timeLeft <= 0) {
+                    stopTimer();
+                    if(gameState.canBuzz && !gameState.isWaitingModal && !gameState.gameOver) {
+                        handleTimeout();
+                    }
+                }
+            } else {
+                stopTimer();
+            }
+        }, 1000);
+    }
+
+    function updateTimerUI() {
+        const timerDiv = document.getElementById('timerDisplay');
+        if(timerDiv) timerDiv.innerText = `⏰ ${gameState.timeLeft}秒`;
+    }
+
+    function handleTimeout() {
+        if(gameState.gameOver) return;
+        if(gameState.canBuzz && !gameState.isWaitingModal) {
+            playSound('giveup');
+            gameState.canBuzz = false;
+            showAutoNextMessage("⏰ 时间到！无人抢答，进入下一题");
+            setTimeout(() => { goToNextQuestion(); }, 1500);
+        }
+    }
+
+    function showAutoNextMessage(msg) {
+        const msgDiv = document.getElementById('gameMessage');
+        msgDiv.innerHTML = `<span style="background:#f39c12; padding:6px 20px; border-radius:40px;">${msg}</span>`;
+        setTimeout(() => { if(msgDiv) msgDiv.innerHTML = ''; }, 1300);
+    }
+
+    function loadData() {
+        const stored = localStorage.getItem('quizGroupsV3');
+        if(stored) {
+            quizGroups = JSON.parse(stored);
+            nextId = Math.max(0, ...quizGroups.map(g=>g.id), 0) + 1;
+        } else {
+            quizGroups = [];
+            nextId = 1;
+        }
+        renderHomePage();
+    }
+
+    function saveToLocal() {
+        localStorage.setItem('quizGroupsV3', JSON.stringify(quizGroups));
+    }
+
+    function addGroup(group) { quizGroups.push(group); saveToLocal(); renderHomePage(); }
+    function updateGroup(index, group) { quizGroups[index] = group; saveToLocal(); renderHomePage(); }
+    function deleteGroup(id) { quizGroups = quizGroups.filter(g => g.id !== id); saveToLocal(); if(currentGameGroup?.id === id) currentGameGroup = null; renderHomePage(); }
+
+    function renderHomePage() {
+        const grid = document.getElementById('quizGrid');
+        grid.innerHTML = '';
+        // 显示所有现有组
+        quizGroups.forEach((group, idx) => {
+            const card = document.createElement('div');
+            card.className = 'quiz-card';
+            const nameSpan = document.createElement('div'); nameSpan.className = 'quiz-name'; nameSpan.innerText = group.name;
+            const btnDiv = document.createElement('div'); btnDiv.className = 'card-buttons';
+            const editBtn = document.createElement('button'); editBtn.innerText = '✏️ 编辑'; editBtn.className = 'card-btn';
+            editBtn.onclick = (e) => { e.stopPropagation(); playSound('click'); openEditPage(idx); };
+            const startBtn = document.createElement('button'); startBtn.innerText = '▶ 开始'; startBtn.className = 'card-btn start-btn';
+            startBtn.onclick = (e) => { e.stopPropagation(); playSound('click'); startGame(group); };
+            btnDiv.appendChild(editBtn); btnDiv.appendChild(startBtn);
+            const delBtn = document.createElement('div'); delBtn.innerText = '✖'; delBtn.className = 'delete-group';
+            delBtn.onclick = (e) => { e.stopPropagation(); playSound('click'); if(confirm(`删除竞猜组“${group.name}”吗？`)) deleteGroup(group.id); };
+            card.appendChild(delBtn); card.appendChild(nameSpan); card.appendChild(btnDiv);
+            grid.appendChild(card);
+        });
+        // 加号卡片
+        const addCard = document.createElement('div');
+        addCard.className = 'quiz-card add-card';
+        addCard.innerHTML = `<div style="font-size:64px;">➕</div><div style="font-size:1.2rem;">新增竞猜组</div>`;
+        addCard.onclick = () => { playSound('click'); openEditPage(-1); };
+        grid.appendChild(addCard);
+    }
+
+    function openEditPage(groupIndex) {
+        currentEditGroupIndex = groupIndex;
+        let group = (groupIndex !== -1 && quizGroups[groupIndex]) ? JSON.parse(JSON.stringify(quizGroups[groupIndex])) : { id: null, name: '我的竞猜', questions: [{ textContent: '', imageData: '', answer: '' }], timeLimit: 10 };
+        if(!group.questions || group.questions.length===0) group.questions = [{ textContent: '', imageData: '', answer: '' }];
+        if(group.timeLimit === undefined) group.timeLimit = 10;
+        document.getElementById('groupNameInput').value = group.name;
+        document.getElementById('timeLimitSelect').value = group.timeLimit;
+        renderQuestionEditor(group.questions);
+        switchPage('editPage');
+    }
+
+    function renderQuestionEditor(questions) {
+        const container = document.getElementById('questionsEditor');
+        container.innerHTML = '';
+        questions.forEach((q, idx) => {
+            const qDiv = document.createElement('div');
+            qDiv.className = 'question-item';
+            qDiv.innerHTML = `
+                <div style="font-weight:bold;">📌 题目 ${idx+1}</div>
+                <div>📝 文字题目：<input type="text" class="q-text" value="${escapeHtml(q.textContent||'')}" placeholder="输入文字题目" style="width:100%;"></div>
+                <div>🖼️ 图片题目(可选): <input type="file" class="q-img-upload" accept="image/*"></div>
+                ${q.imageData ? `<img class="img-preview" src="${q.imageData}">` : '<div class="img-preview" style="display:none;"></div>'}
+                <div>🔑 参考答案：<input type="text" class="q-answer" value="${escapeHtml(q.answer||'')}" placeholder="正确答案文字"></div>
+                <div style="margin-top:8px;"><button class="del-question" type="button">🗑️ 删除本题</button>${idx === questions.length-1 ? '<button class="add-question" type="button">➕ 添加题目</button>' : ''}</div>
+            `;
+            const textInput = qDiv.querySelector('.q-text');
+            const answerInput = qDiv.querySelector('.q-answer');
+            const imgUpload = qDiv.querySelector('.q-img-upload');
+            const previewDiv = qDiv.querySelector('.img-preview');
+            if(q.imageData && previewDiv) { previewDiv.src = q.imageData; previewDiv.style.display='block'; }
+            imgUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if(file) { const reader = new FileReader(); reader.onload = ev => { q.imageData = ev.target.result; if(previewDiv) { previewDiv.src = q.imageData; previewDiv.style.display='block'; } }; reader.readAsDataURL(file); }
+            });
+            const updateData = () => { q.textContent = textInput.value; q.answer = answerInput.value; };
+            textInput.addEventListener('input', updateData);
+            answerInput.addEventListener('input', updateData);
+            qDiv.querySelector('.del-question').addEventListener('click', () => { if(questions.length <= 1) { alert('至少保留一道题目'); return; } questions.splice(idx,1); renderQuestionEditor(questions); });
+            if(qDiv.querySelector('.add-question')) {
+                qDiv.querySelector('.add-question').addEventListener('click', () => { if(questions.length >= 10) { alert('最多10道题目'); return; } questions.push({ textContent: '', imageData: '', answer: '' }); renderQuestionEditor(questions); });
+            }
+            container.appendChild(qDiv);
+        });
+    }
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    function saveCurrentGroup() {
+        let newName = document.getElementById('groupNameInput').value.trim();
+        if(!newName) newName = '奇妙竞猜';
+        const timeLimit = parseInt(document.getElementById('timeLimitSelect').value, 10);
+        const questions = [];
+        const qItems = document.querySelectorAll('#questionsEditor .question-item');
+        for(let i=0; i<qItems.length; i++) {
+            const item = qItems[i];
+            const textInput = item.querySelector('.q-text');
+            const answerInput = item.querySelector('.q-answer');
+            const imgPreview = item.querySelector('.img-preview');
+            let imageData = '';
+            if(imgPreview && imgPreview.src && imgPreview.style.display !== 'none') imageData = imgPreview.src;
+            const textContent = textInput ? textInput.value : '';
+            const answer = answerInput ? answerInput.value : '';
+            if(!textContent && !imageData) { alert(`第${i+1}题 题目不能为空`); return; }
+            questions.push({ textContent, imageData, answer });
+        }
+        if(questions.length === 0 || questions.length > 10) { alert('题目数量须在1~10之间'); return;}
+        const newGroup = { id: (currentEditGroupIndex !== -1 && quizGroups[currentEditGroupIndex]) ? quizGroups[currentEditGroupIndex].id : nextId++, name: newName, questions: questions, timeLimit: timeLimit };
+        if(currentEditGroupIndex !== -1 && quizGroups[currentEditGroupIndex]) updateGroup(currentEditGroupIndex, newGroup);
+        else addGroup(newGroup);
+        switchPage('homePage');
+    }
+
+    function switchPage(pageId) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
+        document.getElementById(pageId).classList.add('active-page');
+        if(pageId === 'homePage') renderHomePage();
+        if(pageId === 'gamePage') initGameUI();
+    }
+
+    function startGame(group) {
+        if(!group.questions || group.questions.length===0) { alert('该竞猜组没有题目，请编辑'); return; }
+        currentGameGroup = JSON.parse(JSON.stringify(group));
+        gameState = {
+            currentQuestionIdx: 0, redScore: 0, blueScore: 0, canBuzz: true, isWaitingModal: false,
+            activeBuzzerTeam: null, isOpponentTurn: false, turnTeam: null, gameOver: false,
+            timeLimit: currentGameGroup.timeLimit || 10, timeLeft: 0, timerActive: false
+        };
+        if(currentModalDiv) currentModalDiv.remove();
+        switchPage('gamePage');
+        loadQuestionForGame(0);
+        updateScoresUI();
+    }
+
+    function loadQuestionForGame(idx) {
+        if(!currentGameGroup || idx >= currentGameGroup.questions.length) { endGameAndShowWinner(); return; }
+        const q = currentGameGroup.questions[idx];
+        const qDiv = document.getElementById('questionDisplay');
+        const answerSpan = document.getElementById('teacherAnswer');
+        qDiv.innerHTML = '';
+        if(q.imageData && q.imageData.length > 50) {
+            const img = document.createElement('img'); img.src = q.imageData; img.className = 'question-img'; img.alt = '题目图片';
+            qDiv.appendChild(img);
+            if(q.textContent) { const textSpan = document.createElement('div'); textSpan.innerText = q.textContent; textSpan.style.marginTop = '10px'; textSpan.style.fontSize = '1.6rem'; qDiv.appendChild(textSpan); }
+        } else { qDiv.innerText = q.textContent || "（题目内容）"; }
+        answerSpan.innerText = q.answer || "(未设置答案)";
+        document.getElementById('progressCenter').innerHTML = `📖 第 ${idx+1} / ${currentGameGroup.questions.length} 题`;
+        gameState.canBuzz = true; gameState.isWaitingModal = false; gameState.activeBuzzerTeam = null; gameState.isOpponentTurn = false; gameState.turnTeam = null;
+        removeModalIfExists(); removeGlow(); document.getElementById('gameMessage').innerHTML = '';
+        setAnswerVisible(false);
+        stopTimer();
+        startTimer(gameState.timeLimit);
+    }
+
+    function removeGlow() { document.getElementById('redBuzzer').classList.remove('glow-effect'); document.getElementById('blueBuzzer').classList.remove('glow-effect'); }
+    function updateScoresUI() { document.getElementById('redScore').innerText = gameState.redScore; document.getElementById('blueScore').innerText = gameState.blueScore; }
+    function removeModalIfExists() { if(currentModalDiv) { currentModalDiv.remove(); currentModalDiv = null; } }
+
+    function buzzerPress(team) {
+        if(gameState.gameOver || !gameState.canBuzz || gameState.isWaitingModal || gameState.isOpponentTurn) return;
+        playSound('click');
+        stopTimer();
+        gameState.canBuzz = false; gameState.activeBuzzerTeam = team; gameState.isWaitingModal = true;
+        const buzzerEl = team === 'red' ? document.getElementById('redBuzzer') : document.getElementById('blueBuzzer');
+        buzzerEl.classList.add('glow-effect'); setTimeout(() => buzzerEl.classList.remove('glow-effect'), 400);
+        showTwoOptionModal(`🎤 ${team==='red'?'红队':'蓝队'} 抢答！请判断答案`, (isCorrect) => {
+            if(isCorrect) { playSound('correct'); setAnswerVisible(false); if(team === 'red') gameState.redScore += 10; else gameState.blueScore += 10; updateScoresUI(); goToNextQuestion(); }
+            else { playSound('wrong'); if(team === 'red') gameState.redScore = Math.max(0, gameState.redScore - 5); else gameState.blueScore = Math.max(0, gameState.blueScore - 5); updateScoresUI(); setAnswerVisible(true);
+                const otherTeam = team === 'red' ? 'blue' : 'red'; gameState.isOpponentTurn = true; gameState.turnTeam = otherTeam; gameState.canBuzz = false; gameState.isWaitingModal = true; removeModalIfExists();
+                const otherBuzzer = otherTeam === 'red' ? document.getElementById('redBuzzer') : document.getElementById('blueBuzzer');
+                otherBuzzer.classList.add('glow-effect'); setTimeout(() => otherBuzzer.classList.remove('glow-effect'), 500);
+                showThreeOptionModal(`✨ ${otherTeam==='red'?'红队':'蓝队'} 获得答题机会 ✨`, (choice) => {
+                    if(choice === 'correct') { playSound('correct'); if(otherTeam === 'red') gameState.redScore += 10; else gameState.blueScore += 10; }
+                    else if(choice === 'wrong') { playSound('wrong'); if(otherTeam === 'red') gameState.redScore = Math.max(0, gameState.redScore - 5); else gameState.blueScore = Math.max(0, gameState.blueScore - 5); }
+                    else if(choice === 'giveup') playSound('giveup');
+                    updateScoresUI(); goToNextQuestion();
+                });
+            }
+        });
+    }
+
+    function showTwoOptionModal(message, onResult) { removeModalIfExists(); const modal = document.createElement('div'); modal.className = 'modal-mask'; modal.innerHTML = `<div class="modal-card"><div style="font-size:1.8rem;">${message}</div><div style="margin-top:20px;"><button id="modalCorrect" style="background:#6fcf97;">✅ 回答正确 (+10)</button><button id="modalWrong" style="background:#e67e5a;">❌ 回答错误 (-5)</button></div></div>`; document.body.appendChild(modal); currentModalDiv = modal; modal.querySelector('#modalCorrect').onclick = () => { playSound('click'); removeModalIfExists(); onResult(true); }; modal.querySelector('#modalWrong').onclick = () => { playSound('click'); removeModalIfExists(); onResult(false); }; }
+    function showThreeOptionModal(message, onChoice) { removeModalIfExists(); const modal = document.createElement('div'); modal.className = 'modal-mask'; modal.innerHTML = `<div class="modal-card"><div style="font-size:1.6rem;">${message}</div><div style="margin-top:20px;"><button class="opt-correct" style="background:#6fcf97;">✔️ 回答正确 (+10)</button><button class="opt-wrong" style="background:#e67e5a;">❌ 回答错误 (-5)</button><button class="opt-giveup" style="background:#bbada0;">✋ 放弃 (0分)</button></div></div>`; document.body.appendChild(modal); currentModalDiv = modal; modal.querySelector('.opt-correct').onclick = () => { playSound('click'); removeModalIfExists(); onChoice('correct'); }; modal.querySelector('.opt-wrong').onclick = () => { playSound('click'); removeModalIfExists(); onChoice('wrong'); }; modal.querySelector('.opt-giveup').onclick = () => { playSound('click'); removeModalIfExists(); onChoice('giveup'); }; }
+
+    function goToNextQuestion() { removeModalIfExists(); stopTimer(); gameState.canBuzz = true; gameState.isWaitingModal = false; gameState.isOpponentTurn = false; gameState.activeBuzzerTeam = null; let nextIdx = gameState.currentQuestionIdx + 1; if(nextIdx < currentGameGroup.questions.length) { gameState.currentQuestionIdx = nextIdx; loadQuestionForGame(nextIdx); } else { endGameAndShowWinner(); } }
+
+    function endGameAndShowWinner() { stopTimer(); gameState.gameOver = true; gameState.canBuzz = false; const red = gameState.redScore; const blue = gameState.blueScore; let winnerText = ''; if(red > blue) winnerText = '🔥 红队获胜！ 🔥'; else if(blue > red) winnerText = '💧 蓝队获胜！ 💧'; else winnerText = '🤝 平局！ 旗鼓相当 🤝'; if(red !== blue) playSound('victory');
+        const questionArea = document.getElementById('questionArea'); questionArea.innerHTML = `<div class="result-overlay"><div class="winner-cup">🏆</div><div class="result-text">${winnerText}</div><div style="font-size:1.2rem;">红队 ${red}  :  ${blue} 蓝队</div></div>`;
+        if(!document.getElementById('permHomeBtn')) { const homeBtn = document.createElement('button'); homeBtn.id = 'permHomeBtn'; homeBtn.innerText = '🏠 返回主页'; homeBtn.className = 'home-btn'; homeBtn.onclick = () => { playSound('click'); document.getElementById('permHomeBtn')?.remove(); switchPage('homePage'); gameState.gameOver = false; }; document.getElementById('gamePage').appendChild(homeBtn); }
+        document.getElementById('redBuzzer').style.pointerEvents = 'none'; document.getElementById('blueBuzzer').style.pointerEvents = 'none';
+    }
+
+    function initGameUI() {
+        document.getElementById('redBuzzer').onclick = () => buzzerPress('red'); document.getElementById('blueBuzzer').onclick = () => buzzerPress('blue');
+        document.getElementById('exitGameBtn').onclick = () => { playSound('click'); if(confirm('返回主页将丢失进度')) { if(document.getElementById('permHomeBtn')) document.getElementById('permHomeBtn').remove(); switchPage('homePage'); gameState.gameOver = true; } };
+        if(document.getElementById('permHomeBtn')) document.getElementById('permHomeBtn').remove();
+        document.getElementById('redBuzzer').style.pointerEvents = 'auto'; document.getElementById('blueBuzzer').style.pointerEvents = 'auto';
+        const qArea = document.getElementById('questionArea'); if(qArea && !qArea.querySelector('#questionDisplay')) qArea.innerHTML = `<div id="questionDisplay" class="question-content">✨ 题目加载中 ✨</div><div id="answerForTeacher" class="answer-ref">📌 参考答案：<span id="teacherAnswer"></span></div>`;
+        setAnswerVisible(false);
+    }
+
+    document.getElementById('saveGroupBtn').addEventListener('click', () => { playSound('click'); saveCurrentGroup(); });
+    document.getElementById('cancelEditBtn').addEventListener('click', () => { playSound('click'); switchPage('homePage'); });
+    loadData();
+    // 全局触摸点击唤醒音频
+    document.body.addEventListener('click', (e) => { if(e.target.closest('.buzzer, .quiz-card, button, .delete-group, .card-btn, .add-card')) { if(!audioCtx) initAudio(); if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); } }, false);
+</script>
+</body>
+</html>
